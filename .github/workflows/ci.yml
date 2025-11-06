@@ -1,0 +1,43 @@
+
+on: 
+  push:
+    branches: ['**']
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    steps:
+      # Descargar repo
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      # Construir imagen
+      - name: Build Docker image
+        run: |
+          cd app
+          docker build -t aw-sample:${{ github.sha }} .
+          echo "Imagen construida exitosamente - tag ${{ github.sha }}"
+      
+      # test básico
+      - name: Test image
+        run: |
+          # Iniciamos el contenedor en segundo plano
+          docker run -d --name test-container -p 8080:80 aw-sample:${{ github.sha }}
+          
+          # Esperamos que Apache inicie
+          sleep 5
+          
+          # Verificamos que responde
+          response=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8080)
+          
+          if [ $response -eq 200 ]; then
+            echo "Test pasado: la aplicación responde 200"
+          else
+            echo "Test fallido: código HTTP $response"
+            exit 1
+          fi
+          
+          # clear
+          docker stop test-container
+          docker rm test-container
