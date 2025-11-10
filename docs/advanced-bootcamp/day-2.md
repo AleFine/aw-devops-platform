@@ -1,16 +1,19 @@
 # Dia 1
 
 ### Paso 1
-Creación del cluster
-```
-alefi@fineloq:~$ eksctl create cluster \
-  --name aw-bootcamp-cluster \
-  --region us-east-1 \
-  --nodes 1 \
-  --node-type t3.small \
-  --managed
-```
 
+# Vaciar el bucket (elimina todas las versiones de objetos)
+aws s3 rm s3://aw-bootcamp-tfstate-79d2cbaa/ --recursive
+
+# Eliminar todas las versiones (si el versionado está habilitado)
+aws s3api list-object-versions --bucket aw-bootcamp-tfstate-79d2cbaa --output json | \
+jq -r '.Versions[] | .Key + " " + .VersionId' | \
+while read key versionId; do
+  aws s3api delete-object --bucket aw-bootcamp-tfstate-79d2cbaa --key "$key" --version-id "$versionId"
+done
+
+# Ahora Terraform puede destruir el bucket
+terraform destroy
 ### Paso 2
 Verificación de cluster y descarga de credenciales
 
