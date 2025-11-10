@@ -67,7 +67,102 @@ module "vpc" {
   }
 }
 
+# Repositorio ECR para almacenar las imágenes Docker de la aplicación
+
+resource "aws_ecr_repository" "app" {
+
+  name                 = "aw-bootcamp-app"
+  image_tag_mutability = "MUTABLE" # Permite sobrescribir tags (útil para 'latest')
+  # Escaneo de imágenes para detectar vulnerabilidades
+
+  image_scanning_configuration {
+
+    scan_on_push = true
+
+  }
+
+  # Encriptación de imágenes en reposo
+  encryption_configuration {
+    encryption_type = "AES256" # Encriptación por defecto de AWS (gratis)
+  }
+
+ 
+  tags = {
+    Name = "aw-bootcamp-app-registry"
+  }
+
+}
+
+ 
+
+# Política de ciclo de vida para limpiar imágenes antiguas y ahorrar costos
+resource "aws_ecr_lifecycle_policy" "app" {
+  repository = aws_ecr_repository.app.name
+  # Mantener solo las últimas 10 imágenes y eliminar las que tengan más de 30 días
+
+  policy = jsonencode({
+
+    rules = [
+
+      {
+        rulePriority = 2
+        description  = "Mantener últimas 10 imágenes"
+        selection = {
+
+          tagStatus   = "any"
+
+          countType   = "imageCountMoreThan"
+
+          countNumber = 10
+
+        }
+
+        action = {
+          type = "expire"
+        }
+      },
+
+      {
+
+        rulePriority = 1
+
+        description  = "Eliminar imágenes SIN TAG de más de 30 días"
+
+        selection = {
+          tagStatus   = "untagged"
+          countType   = "sinceImagePushed"
+          countUnit   = "days"
+          countNumber = 30
+
+        }
+
+        action = {
+
+          type = "expire"
+
+        }
+
+      }
+
+    ]
+
+  })
+
+}
+
+
 # Outputs: valores que queremos ver después del apply
+
+output "ecr_repository_url" {
+  description = "URL del repositorio ECR para la aplicación"
+  value       = aws_ecr_repository.app.repository_url
+
+}
+
+output "ecr_repository_name" {
+  description = "Nombre del repositorio ECR"
+  value       = aws_ecr_repository.app.name
+}
 
 output "vpc_id" {
   description = "ID de la VPC creada"

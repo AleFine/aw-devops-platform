@@ -1,43 +1,80 @@
+name: CI Pipeline with ECR
 
-on: 
+on:
   push:
-    branches: ['**']
+    branches: ["**"]
+
+# CRÍTICO: Permisos para OIDC
+permissions:
+  id-token: write   # Obtener tokens OIDC
+  contents: read    # Leer código del repo
 
 jobs:
-  build:
+  build-and-push:
     runs-on: ubuntu-latest
-    
+
     steps:
-      # Descargar repo
+      # 1. Descargar código
       - name: Checkout code
         uses: actions/checkout@v4
-      
-      # Construir imagen
+
+      # 2. Configurar AWS usando OIDC
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::711387135481:role/GitHubActionsRole
+          aws-region: us-east-1
+
+      # 3. Login a ECR
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      # 4. Construir imagen
       - name: Build Docker image
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          ECR_REPOSITORY: aw-bootcamp-app
+          IMAGE_TAG: ${{ github.sha }}
         run: |
           cd app
-          docker build -t aw-sample:${{ github.sha }} .
-          echo "Imagen construida exitosamente - tag ${{ github.sha }}"
-      
-      # test básico
+          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
+          docker tag $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG $ECR_REGISTRY/$ECR_REPOSITORY:latest
+          echo "Imagen construida: $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
+
+      # 5. Test básico
       - name: Test image
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          ECR_REPOSITORY: aw-bootcamp-app
+          IMAGE_TAG: ${{ github.sha }}
         run: |
-          # Iniciamos el contenedor en segundo plano
-          docker run -d --name test-container -p 8080:80 aw-sample:${{ github.sha }}
-          
-          # Esperamos que Apache inicie
+          docker run -d --name test-container -p 8080:80 $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
           sleep 5
           
-          # Verificamos que responde
           response=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8080)
           
           if [ $response -eq 200 ]; then
-            echo "Test pasado: la aplicación responde 200"
+            echo "Test pasado: aplicación responde 200"
           else
             echo "Test fallido: código HTTP $response"
+            docker logs test-container
             exit 1
           fi
           
-          # clear
           docker stop test-container
           docker rm test-container
+
+      # 6. Push a ECR
+      - name: Push image to ECR
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          ECR_REPOSITORY: aw-bootcamp-app
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
+          
+          echo "Imágenes subidas a ECR:"
+          echo "$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
+          echo "$ECR_REGISTRY/$ECR_REPOSITORY:latest"
