@@ -65,7 +65,7 @@ jobs:
           ECR_REPOSITORY: aw-bootcamp-app
           IMAGE_TAG: ${{ github.sha }}
         run: |
-          docker run -d --name test-container -p 8080:80 $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+          docker run -d --name test-container -p 8080:8080 $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
           sleep 5
           
           response=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8080)
