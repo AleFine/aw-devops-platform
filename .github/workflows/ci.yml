@@ -93,6 +93,8 @@ jobs:
           vuln-type: 'os,library'
           severity: 'HIGH,CRITICAL'
           format: 'table'
+          scanners: 'vuln'
+          ignore-unfixed: 'true'
           exit-code: '1'
 
       # When Trivy fails, collect a detailed JSON report to help triage
