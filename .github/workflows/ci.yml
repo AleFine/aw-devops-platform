@@ -95,6 +95,31 @@ jobs:
           format: 'table'
           exit-code: '1'
 
+      # When Trivy fails, collect a detailed JSON report to help triage
+      - name: Trivy detailed report (JSON)
+        if: failure()
+        uses: aquasecurity/trivy-action@v0.2.0
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          ECR_REPOSITORY: aw-bootcamp-app
+          IMAGE_TAG: ${{ github.sha }}
+        with:
+          image-ref: ${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY }}:${{ env.IMAGE_TAG }}
+          vuln-type: 'os,library'
+          severity: 'UNKNOWN,LOW,MEDIUM,HIGH,CRITICAL'
+          format: 'json'
+          output: 'trivy-report.json'
+          exit-code: '0'
+
+      - name: Upload Trivy report artifact
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: trivy-report
+          path: trivy-report.json
+          if-no-files-found: ignore
+          retention-days: 7
+
       # 5.2 SonarCloud Scan (requiere secreto SONAR_TOKEN y sonar-project.properties)
       - name: SonarQube Scan
         uses: sonarsource/sonarcloud-github-action@master

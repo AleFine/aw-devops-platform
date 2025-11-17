@@ -1,0 +1,4 @@
+# Add CVE IDs here to ignore specific findings from Trivy scans.
+# Use this sparingly and always track a justification and expiry date.
+# Example:
+# CVE-2025-40206 # kernel: netfilter nft_objref (not applicable to container image kernel) - expires: 2026-01-31
