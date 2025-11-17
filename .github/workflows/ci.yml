@@ -98,7 +98,7 @@ jobs:
       # When Trivy fails, collect a detailed JSON report to help triage
       - name: Trivy detailed report (JSON)
         if: failure()
-        uses: aquasecurity/trivy-action@v0.2.0
+        uses: aquasecurity/trivy-action@master
         env:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
           ECR_REPOSITORY: aw-bootcamp-app
