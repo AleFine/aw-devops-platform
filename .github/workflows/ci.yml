@@ -122,17 +122,16 @@ jobs:
           if-no-files-found: ignore
           retention-days: 7
 
-      # 5.2 SonarCloud Scan (requiere secreto SONAR_TOKEN y sonar-project.properties)
+      # 5.2 SonarCloud Scan 
       - name: SonarQube Scan
-        uses: sonarsource/sonarqube-scan-action@v2
+        uses: SonarSource/sonarqube-scan-action@v3
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: https://sonarcloud.io
         with:
-          projectBaseDir: ./app
-          args: >
+          args: >-
             -Dsonar.organization=${{ secrets.SONAR_ORG }}
             -Dsonar.projectKey=AleFine_aw-devops-platform
-            -Dsonar.host.url=https://sonarcloud.io
             -Dsonar.sources=app
 
       # 6. Push a ECR
