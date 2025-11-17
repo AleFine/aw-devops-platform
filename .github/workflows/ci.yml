@@ -97,7 +97,7 @@ jobs:
           ignore-unfixed: 'true'
           exit-code: '1'
 
-      # When Trivy fails, collect a detailed JSON report to help triage
+      # JSON Report de trivy
       - name: Trivy detailed report (JSON)
         if: failure()
         uses: aquasecurity/trivy-action@master
@@ -124,11 +124,12 @@ jobs:
 
       # 5.2 SonarCloud Scan (requiere secreto SONAR_TOKEN y sonar-project.properties)
       - name: SonarQube Scan
-        uses: sonarsource/sonarcloud-github-action@master
+        uses: sonarsource/sonarqube-scan-action@v2
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         with:
-          args: >-
+          projectBaseDir: ./app
+          args: >
             -Dsonar.organization=${{ secrets.SONAR_ORG }}
             -Dsonar.projectKey=AleFine_aw-devops-platform
             -Dsonar.host.url=https://sonarcloud.io
@@ -148,7 +149,7 @@ jobs:
           echo "$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
           echo "$ECR_REGISTRY/$ECR_REPOSITORY:latest"
 
-      # 7. (Opcional) Obtener secreto desde SSM Parameter Store
+      # 7. Obtener secreto desde SSM Parameter Store
       - name: Retrieve DB password from SSM
         run: |
           aws ssm get-parameter \
