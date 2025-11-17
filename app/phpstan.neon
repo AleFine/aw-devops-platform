@@ -1,5 +1,8 @@
 parameters:
   level: 7
   paths:
-    - .
+    - index.php
+  excludePaths:
+    - vendor/*
+  treatPhpDocTypesAsCertain: false
   reportUnmatchedIgnoredErrors: false

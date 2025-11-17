@@ -56,7 +56,7 @@ jobs:
       - name: Run PHPStan
         run: |
           cd app
-          ./vendor/bin/phpstan analyse . --level=7
+          ./vendor/bin/phpstan analyse -c phpstan.neon
 
       # 5. Test básico
       - name: Test image
