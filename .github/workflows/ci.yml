@@ -4,9 +4,8 @@ on:
   push:
     branches: ["**"]
 
-# CRÍTICO: Permisos para OIDC
 permissions:
-  id-token: write   # Obtener tokens OIDC
+  id-token: write  
   contents: read    # Leer código del repo
 
 jobs:
@@ -18,11 +17,18 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      # 1.1 Configurar PHP y Composer para análisis estático
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.1'
+          tools: composer
+
       # 2. Configurar AWS usando OIDC
       - name: Configure AWS credentials (OIDC)
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: arn:aws:iam::711387135481:role/GitHubActionsRole
+          role-to-assume: arn:aws:iam::711387135481:role/GhActionsRole
           aws-region: us-east-1
 
       # 3. Login a ECR
@@ -41,6 +47,16 @@ jobs:
           docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
           docker tag $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG $ECR_REGISTRY/$ECR_REPOSITORY:latest
           echo "Imagen construida: $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
+
+      # 4.1 Análisis estático PHP con PHPStan
+      - name: Install PHPStan (Composer dev)
+        run: |
+          cd app
+          composer install --no-interaction --no-progress
+      - name: Run PHPStan
+        run: |
+          cd app
+          ./vendor/bin/phpstan analyse . --level=7
 
       # 5. Test básico
       - name: Test image
@@ -65,6 +81,32 @@ jobs:
           docker stop test-container
           docker rm test-container
 
+      # 5.1 Escanear imagen con Trivy (falla en HIGH/CRITICAL)
+      - name: Scan image with Trivy
+        uses: aquasecurity/trivy-action@v0.2.0
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          ECR_REPOSITORY: aw-bootcamp-app
+          IMAGE_TAG: ${{ github.sha }}
+        with:
+          image-ref: ${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY }}:${{ env.IMAGE_TAG }}
+          vuln-type: 'os,library'
+          severity: 'HIGH,CRITICAL'
+          format: 'table'
+          exit-code: '1'
+
+      # 5.2 SonarCloud Scan (requiere secreto SONAR_TOKEN y sonar-project.properties)
+      - name: SonarQube Scan
+        uses: sonarsource/sonarcloud-github-action@master
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        with:
+          args: >-
+            -Dsonar.organization=${{ secrets.SONAR_ORG }}
+            -Dsonar.projectKey=AleFine_aw-devops-platform
+            -Dsonar.host.url=https://sonarcloud.io
+            -Dsonar.sources=app
+
       # 6. Push a ECR
       - name: Push image to ECR
         env:
@@ -78,3 +120,12 @@ jobs:
           echo "Imágenes subidas a ECR:"
           echo "$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
           echo "$ECR_REGISTRY/$ECR_REPOSITORY:latest"
+
+      # 7. (Opcional) Obtener secreto desde SSM Parameter Store
+      - name: Retrieve DB password from SSM
+        run: |
+          aws ssm get-parameter \
+            --name /aw/bootcamp/db/password \
+            --with-decryption \
+            --query 'Parameter.Value' \
+            --output text | sed 's/.*/(value masked)/'

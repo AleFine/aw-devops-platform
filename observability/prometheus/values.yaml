@@ -1,0 +1,29 @@
+grafana:
+  adminUser: admin
+  adminPassword: admin123 
+  service:
+    type: ClusterIP
+    port: 80
+  ingress:
+    enabled: false
+  sidecar:
+    datasources:
+      enabled: true
+  additionalDataSources:
+    - name: OpenSearch
+      type: grafana-opensearch-datasource
+      access: proxy
+      isDefault: false
+      url: "https://vpc-aw-bootcamp-os-orvgpuz7skg4atunby6x2mr7ye.us-east-1.es.amazonaws.com"
+      jsonData:
+        database: fluentd-*
+        interval: Daily
+        timeField: "@timestamp"
+        version: "2.11.0"
+        flavor: "opensearch"
+        tlsSkipVerify: false
+      editable: true
+
+prometheus:
+  service:
+    type: ClusterIP

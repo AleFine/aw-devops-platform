@@ -1,0 +1,12 @@
+{
+  "name": "aw/bootcamp-app",
+  "description": "Minimal PHP app for AW Bootcamp",
+  "type": "project",
+  "require": {},
+  "require-dev": {
+    "phpstan/phpstan": "^1.11"
+  },
+  "scripts": {
+    "phpstan": "phpstan analyse . --level=7"
+  }
+}
