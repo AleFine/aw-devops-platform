@@ -35,3 +35,20 @@ variable "db_name" {
   type    = string
   default = "awbootcamp"
 }
+
+# CI/OIDC
+variable "github_org" {
+  type    = string
+  default = "AleFine"
+}
+
+variable "github_repo" {
+  type    = string
+  default = "aw-devops-platform"
+}
+
+variable "oidc_provider_arn" {
+  type        = string
+  description = "ARN del OIDC provider de GitHub en esta cuenta (si omites, se derivará)."
+  default     = null
+}

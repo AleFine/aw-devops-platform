@@ -109,3 +109,19 @@ output "cloudfront_id" {
   description = "ID de CloudFront para invalidaciones"
   value       = module.cloudfront.cloudfront_id
 }
+
+# CI Artifacts & Role Outputs
+output "ci_artifacts_bucket_name" {
+  description = "Nombre del bucket de artefactos de CI"
+  value       = module.ci.artifacts_bucket_name
+}
+
+output "ci_artifacts_bucket_arn" {
+  description = "ARN del bucket de artefactos de CI"
+  value       = module.ci.artifacts_bucket_arn
+}
+
+output "ci_role_arn" {
+  description = "ARN del rol IAM usado por CI (GitHub Actions/Jenkins)"
+  value       = module.ci.ci_role_arn
+}

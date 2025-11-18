@@ -124,3 +124,17 @@ module "cloudfront" {
   tags = local.common_tags
 }
 
+# CI Artifacts bucket + CI Role (for GitHub Actions/Jenkins)
+module "ci" {
+  source = "../../modules/ci"
+
+  project_name = var.project_name
+  environment  = var.environment
+
+  github_org  = var.github_org
+  github_repo = var.github_repo
+
+  # If not provided, module will derive arn:aws:iam::<account>:oidc-provider/token.actions.githubusercontent.com
+  oidc_provider_arn = var.oidc_provider_arn
+}
+

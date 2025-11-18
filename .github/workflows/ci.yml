@@ -30,8 +30,25 @@ jobs:
       - name: Configure AWS credentials (OIDC)
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: arn:aws:iam::711387135481:role/GhActionsRole
+          role-to-assume: arn:aws:iam::711387135481:role/aw-bootcamp-ci-role
           aws-region: us-east-1
+      
+      # Test 1
+      - name: Subir un artefacto con metadata a S3
+        env:
+          ARTIFACTS_BUCKET: ${{ secrets.S3_ARTIFACT_CI }}
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          echo "image_tag=${IMAGE_TAG}" > build-info.txt
+          aws s3 cp build-info.txt s3://$ARTIFACTS_BUCKET/builds/$IMAGE_TAG/build-info.txt
+
+      # Test 2
+      - name: List artifact
+        env:
+          ARTIFACTS_BUCKET: ${{ secrets.S3_ARTIFACT_CI }}
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          aws s3 ls s3://$ARTIFACTS_BUCKET/builds/$IMAGE_TAG/
 
       # 3. Login a ECR
       - name: Login to Amazon ECR
