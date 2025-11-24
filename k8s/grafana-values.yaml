@@ -1,0 +1,55 @@
+adminUser: admin
+adminPassword: admin123 # For demo only; change in production
+
+service:
+  type: ClusterIP
+
+datasources:
+  datasources.yaml:
+    apiVersion: 1
+    datasources:
+      - name: Prometheus
+        type: prometheus
+        access: proxy
+        url: http://prometheus-server.observability.svc.cluster.local
+        isDefault: true
+        jsonData:
+          timeInterval: 15s
+
+dashboardProviders:
+  dashboardproviders.yaml:
+    apiVersion: 1
+    providers:
+      - name: default
+        orgId: 1
+        folder: ''
+        type: file
+        disableDeletion: false
+        editable: true
+        options:
+          path: /var/lib/grafana/dashboards
+
+dashboards:
+  default:
+    app-overview:
+      json: |
+        {
+          "uid": "bootcamp-app",
+          "title": "Bootcamp App Overview",
+          "timezone": "browser",
+          "panels": [
+            {"type":"graph","title":"Pod CPU","datasource":"Prometheus","targets":[{"expr":"sum(rate(container_cpu_usage_seconds_total{pod=~\"aw-app.*\",container!='POD'}[5m]))"}],"id":1},
+            {"type":"graph","title":"Pod Memory","datasource":"Prometheus","targets":[{"expr":"sum(container_memory_working_set_bytes{pod=~\"aw-app.*\",container!='POD'})"}],"id":2},
+            {"type":"graph","title":"Requests (curl load-gen)","datasource":"Prometheus","targets":[{"expr":"sum(rate(http_requests_total{job=\"aw-app\"}[5m]))"}],"id":3}
+          ],
+          "schemaVersion": 38,
+          "version": 1
+        }
+
+resources:
+  requests:
+    cpu: 200m
+    memory: 256Mi
+  limits:
+    cpu: 500m
+    memory: 512Mi
