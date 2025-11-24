@@ -9,6 +9,7 @@ RUN apt-get update \
 	&& rm -rf /var/lib/apt/lists/*
 
 COPY index.php /var/www/html/
+COPY metrics.php /var/www/html/
 
 EXPOSE 8080
 

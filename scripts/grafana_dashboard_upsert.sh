@@ -31,25 +31,37 @@ build_dashboard_json() {
       },
       {
         "id": 2,
-        "title": "CPU Usage",
+        "title": "CPU Usage (aw-app pods)",
         "type": "graph",
         "datasource": "Prometheus",
         "targets": [
           {
-            "expr": "sum(rate(container_cpu_usage_seconds_total{container=~\"aw-app.*\"}[5m]))",
-            "legendFormat": "CPU Usage"
+            "expr": "sum by (pod) (rate(container_cpu_usage_seconds_total{namespace=\"default\",pod=~\"aw-app-.*\",container!=\"POD\"}[5m]))",
+            "legendFormat": "{{pod}}"
           }
         ]
       },
       {
         "id": 3,
-        "title": "Memory Usage",
+        "title": "Memory Working Set (aw-app pods)",
         "type": "graph", 
         "datasource": "Prometheus",
         "targets": [
           {
-            "expr": "sum(container_memory_working_set_bytes{container=~\"aw-app.*\"})",
-            "legendFormat": "Memory Bytes"
+            "expr": "sum by (pod) (container_memory_working_set_bytes{namespace=\"default\",pod=~\"aw-app-.*\",container!=\"POD\"})",
+            "legendFormat": "{{pod}}"
+          }
+        ]
+      },
+      {
+        "id": 4,
+        "title": "App Requests Total",
+        "type": "graph",
+        "datasource": "Prometheus",
+        "targets": [
+          {
+            "expr": "bootcamp_requests_total",
+            "legendFormat": "requests"
           }
         ]
       }
