@@ -53,10 +53,8 @@ spec:
       steps {
         sh '''
           set -e
-          apk add --no-cache curl bash git unzip tar gzip
-          # awscli v2 via zip
-          curl -sL https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip -o awscliv2.zip
-          unzip -q awscliv2.zip && ./aws/install && rm -rf awscliv2.zip aws
+          apk add --no-cache curl bash git unzip tar gzip python3 py3-pip
+          pip install --no-cache-dir --upgrade awscli
           # kubectl
           curl -sL https://dl.k8s.io/release/$(curl -sL https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl -o /usr/local/bin/kubectl && chmod +x /usr/local/bin/kubectl
           # helm
@@ -83,16 +81,21 @@ spec:
       steps {
         script {
           sh 'echo Using Kaniko to build image $IMAGE'
-          container('kaniko') {
+          // Generate ECR auth in tools container and reuse in kaniko
+          container('tools') {
             sh '''
-              ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
               PASS=$(aws ecr get-login-password --region $AWS_REGION)
               REGISTRY="$ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com"
-              mkdir -p /kaniko/.docker
               AUTH=$(echo -n AWS:$PASS | base64)
-              cat > /kaniko/.docker/config.json <<EOF
+              cat > /workspace/docker-config.json <<EOF
 { "auths": { "${REGISTRY}": { "auth": "${AUTH}" } } }
 EOF
+            '''
+          }
+          container('kaniko') {
+            sh '''
+              mkdir -p /kaniko/.docker
+              cp /workspace/docker-config.json /kaniko/.docker/config.json
               /kaniko/executor --context app --dockerfile app/Dockerfile --destination $IMAGE --snapshotMode=redo --use-new-run
             '''
           }
