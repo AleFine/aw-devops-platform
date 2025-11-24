@@ -75,12 +75,10 @@ spec:
           echo "INFO: Build Tag capturado = ${buildTag}"
 
           if (accountId && buildTag) {
-            env.ACCOUNT_ID = accountId
-            env.BUILD_TAG = buildTag
-            env.IMAGE = "${env.ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_REPO}:${env.BUILD_TAG}"
+            env.IMAGE = "${accountId}.dkr.ecr.${env.AWS_REGION}.amazonaws.com/${env.ECR_REPO}:${buildTag}"
             echo "SUCCESS: Nombre de la imagen construido: ${env.IMAGE}"
           } else {
-            error("Error crítico: No se pudo obtener el AWS Account ID o el Build Tag. Imposible continuar.")
+            error("Error crítico: No se pudo obtener el AWS Account ID o el Build Tag.")
           }
         }
         sh 'echo "Verificación final: La variable IMAGE es $IMAGE"'
@@ -90,7 +88,6 @@ spec:
       steps {
         script {
           sh 'echo Using Kaniko to build image $IMAGE'
-          // Generate ECR auth in tools container and reuse in kaniko
           container('tools') {
             sh '''
               PASS=$(aws ecr get-login-password --region $AWS_REGION)
