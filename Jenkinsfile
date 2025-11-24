@@ -87,23 +87,33 @@ spec:
     stage('Build') {
       steps {
         script {
-          sh 'echo Using Kaniko to build image $IMAGE'
-          container('tools') {
-            sh '''
-              PASS=$(aws ecr get-login-password --region $AWS_REGION)
-              REGISTRY="$ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com"
-              AUTH=$(echo -n AWS:$PASS | base64)
-              cat > /workspace/docker-config.json <<EOF
-{ "auths": { "${REGISTRY}": { "auth": "${AUTH}" } } }
-EOF
-            '''
+          if (!env.IMAGE) {
+            error("ERROR: La variable IMAGE no está definida")
           }
+          echo "Building image: ${env.IMAGE}"
+          
+          container('tools') {
+            sh """
+              PASS=\$(aws ecr get-login-password --region ${env.AWS_REGION})
+              REGISTRY="${env.ACCOUNT_ID}.dkr.ecr.${env.AWS_REGION}.amazonaws.com"
+              AUTH=\$(echo -n "AWS:\$PASS" | base64)
+              cat > /workspace/docker-config.json <<EOF
+    { "auths": { "\${REGISTRY}": { "auth": "\${AUTH}" } } }
+    EOF
+            """
+          }
+          
           container('kaniko') {
-            sh '''
+            sh """
               mkdir -p /kaniko/.docker
               cp /workspace/docker-config.json /kaniko/.docker/config.json
-              /kaniko/executor --context app --dockerfile app/Dockerfile --destination $IMAGE --snapshotMode=redo --use-new-run
-            '''
+              /kaniko/executor \\
+                --context app \\
+                --dockerfile app/Dockerfile \\
+                --snapshotMode=redo \\
+                --use-new-run \\
+                --destination ${env.IMAGE}
+            """
           }
         }
       }
