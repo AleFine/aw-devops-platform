@@ -15,8 +15,8 @@ spec:
     - name: workspace
       mountPath: /workspace
   - name: kaniko
-    image: gcr.io/kaniko-project/executor:latest
-    command: ['sh','-c','sleep 3600']
+    image: gcr.io/kaniko-project/executor:debug
+    command: ['/busybox/sh','-c','sleep 3600']
     tty: true
     volumeMounts:
     - name: workspace
@@ -77,7 +77,6 @@ spec:
           env.ACCOUNT_ID = ACCOUNT_ID; env.BUILD_TAG = BUILD_TAG; env.IMAGE = IMAGE
         }
         sh 'echo IMAGE=$IMAGE'
-        sh 'aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com'
       }
     }
     stage('Build') {
