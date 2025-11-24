@@ -68,11 +68,22 @@ spec:
     stage('Prepare') {
       steps {
         script {
-          env.ACCOUNT_ID = sh(returnStdout: true, script: 'aws sts get-caller-identity --query Account --output text').trim()
-          env.BUILD_TAG  = sh(returnStdout: true, script: 'date +%Y%m%d-%H%M%S').trim()
-          env.IMAGE = "${env.ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_REPO}:${env.BUILD_TAG}"
+          def accountId = sh(returnStdout: true, script: 'aws sts get-caller-identity --query Account --output text').trim()
+          echo "INFO: AWS Account ID capturado = ${accountId}"
+          
+          def buildTag = sh(returnStdout: true, script: 'date +%Y%m%d-%H%M%S').trim()
+          echo "INFO: Build Tag capturado = ${buildTag}"
+
+          if (accountId && buildTag) {
+            env.ACCOUNT_ID = accountId
+            env.BUILD_TAG = buildTag
+            env.IMAGE = "${env.ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_REPO}:${env.BUILD_TAG}"
+            echo "SUCCESS: Nombre de la imagen construido: ${env.IMAGE}"
+          } else {
+            error("Error crítico: No se pudo obtener el AWS Account ID o el Build Tag. Imposible continuar.")
+          }
         }
-        sh 'echo "Successfully prepared IMAGE=${IMAGE}"'
+        sh 'echo "Verificación final: La variable IMAGE es $IMAGE"'
       }
     }
     stage('Build') {
