@@ -10,7 +10,6 @@ pipeline {
     GRAFANA_URL = 'http://grafana.observability.svc.cluster.local'
     GRAFANA_DASHBOARD_UID = 'bootcamp-app'
   }
-  options { timestamps(); ansiColor('xterm') }
   stages {
     stage('Bootstrap Tools') {
       steps {

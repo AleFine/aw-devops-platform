@@ -1,0 +1,69 @@
+controller:
+  admin:
+    username: admin
+    password: admin123
+  resources:
+    requests:
+      cpu: 250m
+      memory: 512Mi
+    limits:
+      cpu: 500m
+      memory: 1Gi
+  serviceType: ClusterIP
+  jenkinsUriPrefix: ""
+  installPlugins:
+    - kubernetes
+    - workflow-aggregator
+    - credentials-binding
+    - git
+    - configuration-as-code
+    - ansicolor
+    - timestamper
+    - timestamper
+    - ansicolor
+  javaOpts: "-XshowSettings:vm -XX:+UseContainerSupport -XX:MaxRAMPercentage=80.0"
+  podSecurityContext:
+    runAsUser: 0
+    fsGroup: 0
+  serviceAccount:
+    create: true
+    name: jenkins
+    annotations:
+      eks.amazonaws.com/role-arn: "arn:aws:iam::711387135481:role/aw-bootcamp-eks-jenkins-role"
+
+agent:
+  enabled: true
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 300m
+      memory: 512Mi
+
+persistence:
+  enabled: true
+  size: 8Gi
+
+rbac:
+  create: true
+
+networkPolicy:
+  enabled: false
+
+securityContext:
+  fsGroup: 1000
+  runAsUser: 1000
+
+JCasC:
+  enabled: true
+  defaultConfig: true
+  configScripts: {}
+
+resources:
+  requests:
+    cpu: 250m
+    memory: 512Mi
+  limits:
+    cpu: 500m
+    memory: 1Gi
