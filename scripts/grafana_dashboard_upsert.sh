@@ -39,10 +39,11 @@ dashboard_json=$(cat <<EOF
 EOF
 )
 
-curl -sf -X POST "${GRAFANA_URL%/}/api/dashboards/db" \
+echo "--- Iniciando Carga de Dashboard a Grafana ---"
+curl -v --fail -X POST "${GRAFANA_URL%/}/api/dashboards/db" \
   -H "Authorization: Bearer ${API_KEY}" \
   -H 'Content-Type: application/json' \
-  --data "${dashboard_json}" >/dev/null || {
-    echo "Grafana dashboard upsert failed" >&2; exit 1; }
+  --data-raw "${dashboard_json}" || {
+    echo "--- El comando curl de Grafana falló con el error de arriba. ---" >&2; exit 1; }
 
-echo "Grafana dashboard '${DASH_UID}' updated (image: ${IMAGE_TAG})."
+echo "--- Éxito: Grafana dashboard '${DASH_UID}' actualizado (image: ${IMAGE_TAG}). ---"
