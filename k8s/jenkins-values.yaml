@@ -9,7 +9,7 @@ controller:
     limits:
       cpu: 500m
       memory: 1Gi
-  serviceType: ClusterIP
+  serviceType: LoadBalancer
   jenkinsUriPrefix: ""
   installPlugins:
     - kubernetes

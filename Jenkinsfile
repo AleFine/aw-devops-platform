@@ -1,5 +1,43 @@
 pipeline {
-  agent any
+  agent {
+    kubernetes {
+      yaml """
+apiVersion: v1
+kind: Pod
+spec:
+  serviceAccountName: jenkins
+  containers:
+  - name: tools
+    image: alpine:3.20
+    command: ['sh','-c','sleep 3600']
+    tty: true
+    volumeMounts:
+    - name: workspace
+      mountPath: /workspace
+  - name: kaniko
+    image: gcr.io/kaniko-project/executor:latest
+    command: ['sh','-c','sleep 3600']
+    tty: true
+    volumeMounts:
+    - name: workspace
+      mountPath: /workspace
+    env:
+    - name: DOCKER_CONFIG
+      value: /kaniko/.docker/
+  - name: trivy
+    image: aquasec/trivy:latest
+    command: ['sh','-c','sleep 3600']
+    tty: true
+    volumeMounts:
+    - name: workspace
+      mountPath: /workspace
+  volumes:
+  - name: workspace
+    emptyDir: {}
+"""
+      defaultContainer 'tools'
+    }
+  }
   environment {
     AWS_REGION = 'us-east-1'
     ECR_REPO   = 'aw-bootcamp-app'
@@ -15,10 +53,16 @@ pipeline {
       steps {
         sh '''
           set -e
-          if ! command -v aws >/dev/null; then curl -sL https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip -o awscliv2.zip && unzip -q awscliv2.zip && ./aws/install && rm -rf awscliv2.zip aws; fi
-          if ! command -v kubectl >/dev/null; then curl -sL https://dl.k8s.io/release/$(curl -sL https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl -o /usr/local/bin/kubectl && chmod +x /usr/local/bin/kubectl; fi
-          if ! command -v helm >/dev/null; then curl -s https://raw.githubusercontent.com/helm/helm/master/scripts/get-helm-3 | bash; fi
-          if ! command -v trivy >/dev/null; then curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin; fi
+          apk add --no-cache curl bash git unzip tar gzip
+          # awscli v2 via zip
+          curl -sL https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip -o awscliv2.zip
+          unzip -q awscliv2.zip && ./aws/install && rm -rf awscliv2.zip aws
+          # kubectl
+          curl -sL https://dl.k8s.io/release/$(curl -sL https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl -o /usr/local/bin/kubectl && chmod +x /usr/local/bin/kubectl
+          # helm
+          HELM_VER=$(curl -s https://get.helm.sh | grep -o 'helm-v3[^" ]*linux-amd64.tar.gz' | head -n1 || echo helm-v3.19.2-linux-amd64.tar.gz)
+          curl -sL https://get.helm.sh/helm-v3.19.2-linux-amd64.tar.gz -o helm.tar.gz
+          tar -xzf helm.tar.gz && mv linux-amd64/helm /usr/local/bin/helm && rm -rf linux-amd64 helm.tar.gz
         '''
       }
     }
@@ -33,13 +77,35 @@ pipeline {
           env.ACCOUNT_ID = ACCOUNT_ID; env.BUILD_TAG = BUILD_TAG; env.IMAGE = IMAGE
         }
         sh 'echo IMAGE=$IMAGE'
-        // IRSA provides permissions; no static credentials needed
         sh 'aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com'
       }
     }
-    stage('Build') { steps { sh 'docker build -t $IMAGE app' } }
-    stage('Scan') { steps { sh 'trivy image --severity HIGH,CRITICAL --exit-code 0 --skip-db-update $IMAGE || true' } }
-    stage('Push') { steps { sh 'docker push $IMAGE' } }
+    stage('Build') {
+      steps {
+        script {
+          sh 'echo Using Kaniko to build image $IMAGE'
+          container('kaniko') {
+            sh '''
+              ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+              PASS=$(aws ecr get-login-password --region $AWS_REGION)
+              REGISTRY="$ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com"
+              mkdir -p /kaniko/.docker
+              AUTH=$(echo -n AWS:$PASS | base64)
+              cat > /kaniko/.docker/config.json <<EOF
+{ "auths": { "${REGISTRY}": { "auth": "${AUTH}" } } }
+EOF
+              /kaniko/executor --context app --dockerfile app/Dockerfile --destination $IMAGE --snapshotMode=redo --use-new-run
+            '''
+          }
+        }
+      }
+    }
+    stage('Scan') {
+      steps {
+        container('trivy') { sh 'trivy image --severity HIGH,CRITICAL --exit-code 0 --skip-db-update $IMAGE || true' }
+      }
+    }
+    stage('Push') { steps { echo 'Image already pushed by Kaniko' } }
     stage('Deploy') {
       steps {
         sh 'aws eks update-kubeconfig --name $EKS_CLUSTER --region $AWS_REGION'
@@ -54,6 +120,6 @@ pipeline {
   post {
     success { echo "Pipeline succeeded: $IMAGE" }
     failure { echo 'Pipeline failed.' }
-    always  { sh 'docker images | grep $ECR_REPO || true' }
+    always  { echo 'Pipeline finished (images listed by Kaniko build logs).' }
   }
 }
