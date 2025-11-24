@@ -11,7 +11,6 @@ if [[ -z "$GRAFANA_URL" || -z "$API_KEY" ]]; then
   exit 1
 fi
 
-# CORREGIDO: JSON válido para Grafana
 build_dashboard_json() {
   local uid="$1"; shift
   cat <<EOF
@@ -87,14 +86,12 @@ echo "--- Iniciando Carga de Dashboard a Grafana ---"
 echo "URL: ${GRAFANA_URL}"
 echo "Dashboard UID: ${DASH_UID}"
 
-# PRIMERO: Verificar que Grafana responde
 echo "--- Verificando conexión con Grafana ---"
 if ! curl -s -H "Authorization: Bearer ${API_KEY}" "${GRAFANA_URL%/}/api/health" > /dev/null; then
     echo "ERROR: No se puede conectar a Grafana o API key inválida"
     exit 1
 fi
 
-# SEGUNDO: Enviar dashboard
 response=$(curl -s -w "%{http_code}" -X POST "${GRAFANA_URL%/}/api/dashboards/db" \
   -H "Authorization: Bearer ${API_KEY}" \
   -H "Content-Type: application/json" \
@@ -109,7 +106,7 @@ if [ "$http_code" -eq 200 ]; then
   exit 0
 fi
 
-# Manejo específico de dashboard provisionado (400 Cannot save provisioned dashboard)
+# Manejo específico de dashboard provisionado 
 if [ "$http_code" -eq 400 ] && echo "$response_body" | grep -qi 'Cannot save provisioned dashboard'; then
   echo "WARN: Dashboard provisionado; generando UID alterno para clon dinámico."
   ALT_UID="${DASH_UID}-ci"
