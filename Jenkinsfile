@@ -53,8 +53,7 @@ spec:
       steps {
         sh '''
           set -e
-          apk add --no-cache curl bash git unzip tar gzip python3 py3-pip
-          pip install --no-cache-dir --upgrade awscli
+          apk add --no-cache curl bash git unzip tar gzip python3 py3-pip aws-cli
           # kubectl
           curl -sL https://dl.k8s.io/release/$(curl -sL https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl -o /usr/local/bin/kubectl && chmod +x /usr/local/bin/kubectl
           # helm
