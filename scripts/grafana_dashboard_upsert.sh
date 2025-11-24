@@ -12,10 +12,12 @@ if [[ -z "$GRAFANA_URL" || -z "$API_KEY" ]]; then
 fi
 
 # CORREGIDO: JSON válido para Grafana
-dashboard_json=$(cat <<EOF
+build_dashboard_json() {
+  local uid="$1"; shift
+  cat <<EOF
 {
   "dashboard": {
-    "uid": "${DASH_UID}",
+    "uid": "${uid}",
     "title": "Bootcamp App Metrics",
     "tags": ["bootcamp", "deployment"],
     "timezone": "browser",
@@ -65,7 +67,9 @@ dashboard_json=$(cat <<EOF
   "overwrite": true
 }
 EOF
-)
+}
+
+dashboard_json=$(build_dashboard_json "${DASH_UID}")
 
 echo "--- Iniciando Carga de Dashboard a Grafana ---"
 echo "URL: ${GRAFANA_URL}"
@@ -88,10 +92,33 @@ http_code="${response: -3}"
 response_body="${response%???}"
 
 if [ "$http_code" -eq 200 ]; then
-    echo "--- Éxito: Dashboard '${DASH_UID}' actualizado ---"
-    echo "Image: ${IMAGE_TAG}"
-else
-    echo "--- ERROR: Código HTTP ${http_code} ---"
-    echo "Respuesta de Grafana: ${response_body}"
-    exit 1
+  echo "--- Éxito: Dashboard '${DASH_UID}' actualizado ---"
+  echo "Image: ${IMAGE_TAG}"
+  exit 0
 fi
+
+# Manejo específico de dashboard provisionado (400 Cannot save provisioned dashboard)
+if [ "$http_code" -eq 400 ] && echo "$response_body" | grep -qi 'Cannot save provisioned dashboard'; then
+  echo "WARN: Dashboard provisionado; generando UID alterno para clon dinámico."
+  ALT_UID="${DASH_UID}-ci"
+  echo "INFO: Usando UID alterno ${ALT_UID}"
+  dashboard_json=$(build_dashboard_json "${ALT_UID}")
+  response=$(curl -s -w "%{http_code}" -X POST "${GRAFANA_URL%/}/api/dashboards/db" \
+    -H "Authorization: Bearer ${API_KEY}" \
+    -H "Content-Type: application/json" \
+    --data-raw "${dashboard_json}")
+  http_code="${response: -3}"
+  response_body="${response%???}"
+  if [ "$http_code" -eq 200 ]; then
+     echo "--- Éxito: Dashboard alterno '${ALT_UID}' creado ---"
+     exit 0
+  else
+     echo "ERROR: Reintento con UID alterno falló (HTTP $http_code)"
+     echo "Respuesta: ${response_body}"
+     exit 1
+  fi
+fi
+
+echo "--- ERROR: Código HTTP ${http_code} ---"
+echo "Respuesta de Grafana: ${response_body}"
+exit 1

@@ -156,13 +156,12 @@ EOF
         GRAFANA_KEY = credentials('grafana-api-key') 
       }
       steps { 
-        sh """
-          bash \${WORKSPACE}/scripts/grafana_dashboard_upsert.sh \\
-            "${env.GRAFANA_URL}" \\
-            "${GRAFANA_KEY}" \\
-            "${env.GRAFANA_DASHBOARD_UID}" \\
-            "${env.IMAGE}"
-        """
+        script {
+          def rc = sh(returnStatus: true, script: "bash ${WORKSPACE}/scripts/grafana_dashboard_upsert.sh '${env.GRAFANA_URL}' '${GRAFANA_KEY}' '${env.GRAFANA_DASHBOARD_UID}' '${env.IMAGE}'")
+          if (rc != 0) {
+            echo "WARN: Grafana dashboard update fallo (rc=${rc}) pero no detiene el pipeline"
+          }
+        }
       }
     }
   }
