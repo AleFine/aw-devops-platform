@@ -127,14 +127,26 @@ EOF
         sh """
           aws eks update-kubeconfig --name ${env.EKS_CLUSTER} --region ${env.AWS_REGION}
           
-          echo "Verificando estructura del chart..."
+          # Verificar estructura del chart
+          echo "=== Verificando estructura del chart ==="
+          ls -la \${WORKSPACE}/helm/
           ls -la \${WORKSPACE}/helm/aw-app/
           
+          # Verificar que Chart.yaml existe
+          if [ ! -f "\${WORKSPACE}/helm/aw-app/Chart.yaml" ]; then
+            echo "ERROR: Chart.yaml no existe en \${WORKSPACE}/helm/aw-app/"
+            exit 1
+          fi
+          
+          cat \${WORKSPACE}/helm/aw-app/Chart.yaml
+          
+          # Deploy
           helm upgrade --install aw-app \${WORKSPACE}/helm/aw-app \\
             --set image.repository=${env.ACCOUNT_ID}.dkr.ecr.${env.AWS_REGION}.amazonaws.com/${env.ECR_REPO} \\
             --set image.tag=${env.BUILD_TAG} \\
-            --create-namespace \\
-            --namespace default
+            --namespace default \\
+            --wait \\
+            --timeout 5m
         """
       }
     }
