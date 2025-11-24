@@ -68,12 +68,11 @@ spec:
     stage('Prepare') {
       steps {
         script {
-          ACCOUNT_ID = sh(returnStdout: true, script: 'aws sts get-caller-identity --query Account --output text').trim()
-          BUILD_TAG  = sh(returnStdout: true, script: 'date +%Y%m%d-%H%M%S').trim()
-          IMAGE      = "${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_REPO}:${BUILD_TAG}"
-          env.ACCOUNT_ID = ACCOUNT_ID; env.BUILD_TAG = BUILD_TAG; env.IMAGE = IMAGE
+          env.ACCOUNT_ID = sh(returnStdout: true, script: 'aws sts get-caller-identity --query Account --output text').trim()
+          env.BUILD_TAG  = sh(returnStdout: true, script: 'date +%Y%m%d-%H%M%S').trim()
+          env.IMAGE = "${env.ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_REPO}:${env.BUILD_TAG}"
         }
-        sh 'echo IMAGE=$IMAGE'
+        sh 'echo "Successfully prepared IMAGE=${IMAGE}"'
       }
     }
     stage('Build') {
