@@ -1,0 +1,40 @@
+replicaCount: 2
+
+image:
+  repository: "711387135481.dkr.ecr.us-east-1.amazonaws.com/aw-bootcamp-app"
+  tag: "v20251112-1"
+  pullPolicy: IfNotPresent
+
+service:
+  type: ClusterIP
+  port: 80
+
+resources:
+  limits:
+    cpu: 250m
+    memory: 256Mi
+  requests:
+    cpu: 100m
+    memory: 128Mi
+
+secretName: aw-app-secrets
+
+appEnv: dev
+db:
+  host: "aw-bootcamp-db.cluster-con0qiowui9u.us-east-1.rds.amazonaws.com"
+  port: 3306
+  name: awbootcamp
+redis:
+  host: aw-redis-master 
+  port: 6379
+
+ingress:
+  enabled: false
+  className: ""
+  annotations: {}
+  hosts:
+    - host: app.local
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []

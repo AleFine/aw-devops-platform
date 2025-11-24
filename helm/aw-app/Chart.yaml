@@ -1,0 +1,14 @@
+apiVersion: v2
+name: aw-app
+description: Helm chart para la aplicación PHP/Laravel mínima
+version: 0.1.0
+appVersion: "1.0.0"
+type: application
+
+keywords:
+  - php
+  - backend
+
+maintainers:
+  - name: aw-bootcamp
+
