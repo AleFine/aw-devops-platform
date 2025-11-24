@@ -89,7 +89,7 @@ spec:
               PASS=\$(aws ecr get-login-password --region ${env.AWS_REGION})
               REGISTRY="${env.ACCOUNT_ID}.dkr.ecr.${env.AWS_REGION}.amazonaws.com"
               AUTH=\$(echo -n "AWS:\$PASS" | base64)
-              cat > /workspace/docker-config.json <<EOF
+              cat > /home/jenkins/agent/docker-config.json <<EOF
 {"auths": {"\${REGISTRY}": {"auth": "\${AUTH}"}}}
 EOF
             """
@@ -98,10 +98,10 @@ EOF
           container('kaniko') {
             sh """
               mkdir -p /kaniko/.docker
-              cp /workspace/docker-config.json /kaniko/.docker/config.json
+              cp /home/jenkins/agent/docker-config.json /kaniko/.docker/config.json
               /kaniko/executor \\
-                --context app \\
-                --dockerfile app/Dockerfile \\
+                --context /home/jenkins/agent/workspace/aw-task/app \\
+                --dockerfile /home/jenkins/agent/workspace/aw-task/app/Dockerfile \\
                 --snapshotMode=redo \\
                 --use-new-run \\
                 --destination ${env.IMAGE}
