@@ -114,7 +114,7 @@ spec:
     stage('Scan') {
       steps {
         container('trivy') { 
-          sh "trivy image --severity HIGH,CRITICAL --exit-code 0 --skip-db-update ${env.IMAGE} || true" 
+          sh "trivy image --severity HIGH,CRITICAL --exit-code 0 ${env.IMAGE} || true" 
         }
       }
     }
