@@ -59,7 +59,6 @@ spec:
     stage('Prepare') {
       steps {
         script {
-          // Capturar valores en variables locales
           def accountId = sh(returnStdout: true, script: 'aws sts get-caller-identity --query Account --output text').trim()
           def buildTag = sh(returnStdout: true, script: 'date +%Y%m%d-%H%M%S').trim()
           
@@ -90,8 +89,8 @@ spec:
               REGISTRY="${env.ACCOUNT_ID}.dkr.ecr.${env.AWS_REGION}.amazonaws.com"
               AUTH=\$(echo -n "AWS:\$PASS" | base64 -w 0)
               cat > \${WORKSPACE}/docker-config.json <<EOF
-    {"auths":{"\${REGISTRY}":{"auth":"\${AUTH}"}}}
-    EOF
+{"auths":{"\${REGISTRY}":{"auth":"\${AUTH}"}}}
+EOF
             """
           }
           
@@ -127,9 +126,15 @@ spec:
       steps {
         sh """
           aws eks update-kubeconfig --name ${env.EKS_CLUSTER} --region ${env.AWS_REGION}
-          helm upgrade --install aw-app helm/aw-app \\
+          
+          echo "Verificando estructura del chart..."
+          ls -la \${WORKSPACE}/helm/aw-app/
+          
+          helm upgrade --install aw-app \${WORKSPACE}/helm/aw-app \\
             --set image.repository=${env.ACCOUNT_ID}.dkr.ecr.${env.AWS_REGION}.amazonaws.com/${env.ECR_REPO} \\
-            --set image.tag=${env.BUILD_TAG}
+            --set image.tag=${env.BUILD_TAG} \\
+            --create-namespace \\
+            --namespace default
         """
       }
     }
@@ -140,7 +145,7 @@ spec:
       }
       steps { 
         sh """
-          bash scripts/grafana_dashboard_upsert.sh \\
+          bash \${WORKSPACE}/scripts/grafana_dashboard_upsert.sh \\
             "${env.GRAFANA_URL}" \\
             "${GRAFANA_KEY}" \\
             "${env.GRAFANA_DASHBOARD_UID}" \\
